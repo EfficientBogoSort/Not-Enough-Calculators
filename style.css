@@ -29,7 +29,7 @@ html, body, #dispCont{
     align-items: center;
     justify-content: center;
 }
-#numpadLine{
+.numpadLine{
     display: flex;
     flex: 1;
 }
