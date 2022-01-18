@@ -15,6 +15,38 @@ let closeParCount = 0;
 let opSym = new Set();
 
 
+
+// functions for each operation
+function sumNums(a,b){
+    return a+b;
+}
+function subNums(a,b){
+    return a-b;
+}
+function mulNums(a,b){
+    return a*b;
+}
+function divNums(a,b){
+    if (b === 0){
+        return "ERROR"
+    }
+    return a/b;
+}
+function expNums(a,b){
+    return Math.pow(a,b);
+}
+
+
+let opDict = {
+    '+': sumNums,
+    '-': subNums,
+    '*': mulNums,
+    '/': divNums,
+    '*': expNums
+}
+
+
+
 sqrt.addEventListener('click', function(){
     if (numSelected || !opSelected){
         return;
@@ -139,3 +171,45 @@ function clear(){
     opSelected = true;
 }
 clearButt.addEventListener('click', clear);
+
+function processTok(tok, currExpr){
+    let finalTok;
+    if (tok.charAt(0) === '('){
+        finalTok = interpretInp(tok.substring(1, tok.length-1));
+    } else{
+        finalTok = tok;
+    }
+    currExpr.push(finalTok);
+}
+
+
+function interpretInp(expr){
+    let finalExpr = [];
+    const ops = new Set("+-*/^");
+    let curr = '';
+    let i = 0;
+    let par = 0;
+    while (i < expr.length){
+        if (expr[i] === ')' && par >= 1){
+            curr += ')';
+            par--;
+        } else if (expr[i] === '('){
+            par++;
+            curr += '(';
+        } else if (par > 0){
+            curr += expr[i];
+        } else if ((expr[i] >= '0' && expr[i] <= '9') || expr[i] === '√'){
+            curr += expr[i];
+        } else if (ops.has(expr[i])){
+            processTok(curr, finalExpr);
+            finalExpr.push(expr[i]);
+            curr = '';
+        }
+        i++;
+    }
+    if (curr){
+        processTok(curr, finalExpr);
+    }
+    return finalExpr.reverse();
+}
+
