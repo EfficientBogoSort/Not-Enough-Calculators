@@ -27,24 +27,30 @@ function mulNums(a,b){
     return a*b;
 }
 function divNums(a,b){
-    if (b === 0){
-        return "ERROR"
-    }
     return a/b;
 }
 function expNums(a,b){
     return Math.pow(a,b);
 }
 
-
 let opDict = {
     '+': sumNums,
     '-': subNums,
     '*': mulNums,
     '/': divNums,
-    '*': expNums
+    '^': expNums
 }
 
+document.onkeydown = function (e){
+    event.preventDefault();
+    if (e.key >= '0' && e.key <= '9'){
+        concatNum(e.key);
+    } else if (e.key === 'Backspace'){
+        delInp();
+    } else if (e.key in opDict){
+        addOp(e.key);
+    }
+}
 
 
 sqrt.addEventListener('click', function(){
@@ -67,7 +73,7 @@ piButt.addEventListener('click', function(){
 // only when there is an operator before, so the calculator
 // knows what operation to applt to this parenthesis
 openPar.addEventListener('click',function(){
-    if (numSelected || !opSelected || !num.length){
+    if (numSelected || !opSelected){
         return;
     }
     openParCount++;
@@ -92,48 +98,49 @@ closePar.addEventListener('click', function(){
 })
 
 
-function addOp(){
+function addOp(p){
     if (opSelected){
-        return;
+        if (p !== '-'){
+            return;
+        } else if (!(num.length === 0 ||num[num.length - 1] === '(')){
+            return;
+        }
+        
     }
     if (numSelected){
         numSelected = false;
     }
-    num.push(this.textContent);
+    num.push(p);
     opSelected = true;
 
     updtDisp();
 }
 
-for (let i = 0; i < numButts.length; ++i){
-   numButts[i].addEventListener('click',function(){
-       if (num[num.length - 1] === 'π'){
-           return;
-       }
-       num.push(this.textContent);
-       if (opSelected){
-           opSelected = false;
-       }
-       if (!numSelected){
-           numSelected = true;
-       }
-       updtDisp();
-       
-   }) 
-}
-for (let i = 0; i < opButts.length; ++i){
-    opButts[i].addEventListener('click', addOp);
-    opSym.add(opButts[i].textContent);
+function concatNum(n){
+    if (num[num.length - 1] === 'π' ||
+    (n === '0' && num[num.length-1] === '/')){
+        return;
+    }
+    num.push(n);
+    if (opSelected){
+        opSelected = false;
+    }
+    if (!numSelected){
+        numSelected = true;
+    }
+    updtDisp();
 }
 
-
-// depending on the last input after deleting,
-// we have to make sure that the variables
-// are correct to prevent unexpected functionality
-del.addEventListener('click', function(){
+function delInp(){
     num.pop();
     let last = num[num.length - 1];
     if (last >= '0' && last <= '9'){
+        if (!numSelected){
+            numSelected = true;
+        }
+        if (opSelected){
+            opSelected = false;
+        }  
     } 
     else if (opSym.has(last)){
         numSelected = false;
@@ -147,7 +154,25 @@ del.addEventListener('click', function(){
         opSelected = true;
     }
     updtDisp();
-})
+}
+
+for (let i = 0; i < numButts.length; ++i){
+   numButts[i].addEventListener('click', function(){
+       concatNum(this.textContent);
+    }); 
+}
+for (let i = 0; i < opButts.length; ++i){
+    opButts[i].addEventListener('click', function(){
+        addOp(this.textContent);
+    });
+    opSym.add(opButts[i].textContent);
+}
+
+
+// depending on the last input after deleting,
+// we have to make sure that the variables
+// are correct to prevent unexpected functionality
+del.addEventListener('click', delInp);
 
 
 
@@ -172,44 +197,93 @@ function clear(){
 }
 clearButt.addEventListener('click', clear);
 
-function processTok(tok, currExpr){
-    let finalTok;
-    if (tok.charAt(0) === '('){
-        finalTok = interpretInp(tok.substring(1, tok.length-1));
-    } else{
-        finalTok = tok;
-    }
-    currExpr.push(finalTok);
+
+function isNumeric(term){
+    return !isNaN(term) && !isNaN(parseFloat(term));
 }
-
-
-function interpretInp(expr){
-    let finalExpr = [];
-    const ops = new Set("+-*/^");
-    let curr = '';
-    let i = 0;
-    let par = 0;
-    while (i < expr.length){
-        if (expr[i] === ')' && par >= 1){
-            curr += ')';
-            par--;
-        } else if (expr[i] === '('){
-            par++;
-            curr += '(';
-        } else if (par > 0){
-            curr += expr[i];
-        } else if ((expr[i] >= '0' && expr[i] <= '9') || expr[i] === '√'){
-            curr += expr[i];
-        } else if (ops.has(expr[i])){
-            processTok(curr, finalExpr);
-            finalExpr.push(expr[i]);
-            curr = '';
+/*before adding to the current expression,
+tokens that are array or square roots are split.
+Numeric values are added directly
+*/
+function processTok(tok, currExpr){
+    if (tok[0] === '(' && tok[tok.length-1] === ')'){
+        tok = splitExpr(tok.substring(1, tok.length-1),  new Set('+-*/^'));
+    } else if (tok[0] === '√'){
+        let tmp;
+        if (tok[1] === '('){
+            tmp = splitExpr(tok.substring(2, tok.length-1))
+        } else{
+            tmp = tok.substring(2, tok.length);
         }
-        i++;
+        tok = ['√', tmp];
+    }
+    currExpr.push(tok);
+}
+/* flattens out an expression into arrays
+Does not concern with order of operations.
+eg: "1+3(5*5)" --> [1, +, [5,*,5]]
+*/
+function splitExpr(expr){
+    const sign = new Set('+-*/^');
+    let finalExpr = [];
+    let curr = '';
+    let pCount = 0;
+    for (let i = 0; i < expr.length; ++i){
+        if (!sign.has(expr[i])){
+             if (expr[i] === ')'){
+                pCount--;
+            } else if (expr[i] === '('){
+                pCount++;
+            } 
+            curr += expr[i];
+        } else{
+            // have to remember that negative sign can go in front
+            // of another number without a number before it
+            if (pCount > 0 ||
+                (expr[i] === '-' && (sign.has(expr[i-1]) || i === 0) ||
+                expr[i-1] === '(')){
+                curr += expr[i];
+            } else{
+                processTok(curr, finalExpr);
+                finalExpr.push(expr[i]);
+                curr = '';
+            }
+        }
+
     }
     if (curr){
         processTok(curr, finalExpr);
     }
-    return finalExpr.reverse();
+    return finalExpr;
+
+}
+
+
+
+/* solves a flattened expression following PEMDAS*/ 
+function solve(expr){
+    const ops = [new Set("^"), new Set("*/"), new Set("+-")];
+    for (let j = 0; j < ops.length; ++j){
+        let i = 0;
+        while (i < expr.length){
+            if (Array.isArray(expr[i])){
+                if (expr[i][0] === '√'){
+                    expr[i] = Math.sqrt(solve(expr[i][1]))
+                } else{
+                    expr[i] = solve(expr[i]);
+                }
+            } else{
+                if (isNumeric(expr[i]) && ops[j].has(expr[i+1])){
+                    expr.splice(i, 3,  opDict[expr[i+1]](parseFloat(expr[i]), parseFloat(expr[i+2])));
+                    //expr[i] = opDict[expr[i+1]](parseFloat(expr[i]), parseFloat(expr[i+2]));
+                } else{
+                    i += 2;
+                }
+            }
+        }
+        
+    }
+    return expr[0];
+
 }
 
