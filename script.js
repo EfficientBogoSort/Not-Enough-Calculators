@@ -1,19 +1,4 @@
-let num = [];
-let numButts = document.getElementsByClassName("num");
-let opButts = document.getElementsByClassName("op");
-let disp = document.getElementById("disp");
-let clearButt = document.getElementById("clear");
-let openPar = document.getElementById("openPar");
-let closePar = document.getElementById("closePar");
-let sqrt = document.getElementById("sqrt");
-let del = document.getElementById('del');
-let piButt = document.getElementById('pi');
-let opSelected = true;
-let numSelected = false;
-let openParCount = 0;
-let closeParCount = 0;
-let opSym = new Set();
-
+let calc = {num:[], opSelected: true, numSelected:false,openParCount:0, closeParCount:0};
 
 
 // functions for each operation
@@ -52,151 +37,99 @@ document.onkeydown = function (e){
     }
 }
 
-
-sqrt.addEventListener('click', function(){
-    if (numSelected || !opSelected){
-        return;
-    }
-    num.push(this.textContent);
-    updtDisp();
-})
-piButt.addEventListener('click', function(){
-    if (numSelected || (!opSelected && !num.length) || num[num.length-1] === this.textContent){
-        return;
-    }
-    num.push(this.textContent);
-    opSelected = false;
-    updtDisp();
-})
-
-// only allow the user to input an opening parenthesis
-// only when there is an operator before, so the calculator
-// knows what operation to applt to this parenthesis
-openPar.addEventListener('click',function(){
-    if (numSelected || !opSelected){
-        return;
-    }
-    openParCount++;
-    num.push(this.textContent);
-    updtDisp();
-    return
-    
-})
-// only allow the user to put a closing parenthesis if there
-// is an opening parenthesis that can be closed
-// also it can't be placed after an operator as that would
-// be invalid
-closePar.addEventListener('click', function(){
-    if ((openParCount <= closeParCount) || opSelected){
-        return;
-    }
-    num.push(this.textContent);
-    closeParCount++;
-    updtDisp();
-    return;
-    
-})
-
-
 function addOp(p){
-    if (opSelected){
+    if (calc.opSelected){
         if (p !== '-'){
             return;
-        } else if (!(num.length === 0 ||num[num.length - 1] === '(')){
+        } else if (!(calc.num.length === 0 ||calc.num[calc.num.length - 1] === '(')){
             return;
         }
         
     }
-    if (numSelected){
-        numSelected = false;
+    if (calc.numSelected){
+        calc.numSelected = false;
     }
-    num.push(p);
-    opSelected = true;
+    calc.num.push(p);
+    calc.opSelected = true;
 
     updtDisp();
 }
 
 function concatNum(n){
-    if (num[num.length - 1] === 'π' ||
-    (n === '0' && num[num.length-1] === '/')){
+    if (calc.num[calc.num.length - 1] === 'π' ||
+    (n === '0' && calc.num[calc.num.length-1] === '/')){
         return;
     }
-    num.push(n);
-    if (opSelected){
-        opSelected = false;
+    calc.num.push(n);
+    if (calc.opSelected){
+        calc.opSelected = false;
     }
-    if (!numSelected){
-        numSelected = true;
+    if (!calc.numSelected){
+        calc.numSelected = true;
     }
     updtDisp();
 }
 
 function delInp(){
-    num.pop();
-    let last = num[num.length - 1];
+    calc.num.pop();
+    const opSym = new Set("+-*/^")
+    let last = calc.num[calc.num.length - 1];
     if (last >= '0' && last <= '9'){
-        if (!numSelected){
-            numSelected = true;
+        if (!calc.numSelected){
+            calc.numSelected = true;
         }
-        if (opSelected){
-            opSelected = false;
+        if (calc.opSelected){
+            calc.opSelected = false;
         }  
     } 
     else if (opSym.has(last)){
-        numSelected = false;
-        opSelected = true;
+        calc.numSelected = false;
+        calc.opSelected = true;
     } 
     else if (last === '('){
-        openParCount--;
+        calc.openParCount--;
     } else if (last === ')'){
-        closeParCount--;
+        calc.closeParCount--;
     } else if (last === 'π'){
-        opSelected = true;
+        calc.opSelected = true;
     }
     updtDisp();
 }
 
-for (let i = 0; i < numButts.length; ++i){
-   numButts[i].addEventListener('click', function(){
-       concatNum(this.textContent);
-    }); 
+function addButtFunct(){
+    let numButts = document.getElementsByClassName("num");
+    let opButts = document.getElementsByClassName("op");
+    for (let i = 0; i < numButts.length; ++i){
+        numButts[i].addEventListener('click', function(){
+            concatNum(this.textContent);
+         }); 
+     }
+     for (let i = 0; i < opButts.length; ++i){
+        opButts[i].addEventListener('click', function(){
+            addOp(this.textContent);
+        });
+    }
 }
-for (let i = 0; i < opButts.length; ++i){
-    opButts[i].addEventListener('click', function(){
-        addOp(this.textContent);
-    });
-    opSym.add(opButts[i].textContent);
-}
-
-
-// depending on the last input after deleting,
-// we have to make sure that the variables
-// are correct to prevent unexpected functionality
-del.addEventListener('click', delInp);
-
-
 
 function numify(){
-    if (num.length === 0){
+    if (calc.num.length === 0){
         return "";
     }
-    return num.join("");
+    return calc.num.join("");
 }
 
 function updtDisp(){
-    disp.textContent = numify();
+    document.getElementById("disp").textContent = numify();
 }
 
 function clear(){
-    num.length = 0;
-    openParCount = 0;
-    closeParCount = 0;
-    numSelected = false;
+    calc.num.length = 0;
+    calc.openParCount = 0;
+    calc.closeParCount = 0;
+    calc.numSelected = false;
     updtDisp();
-    opSelected = true;
+    calc.opSelected = true;
 }
-clearButt.addEventListener('click', clear);
-
 
 function isNumeric(term){
     return !isNaN(term) && !isNaN(parseFloat(term));
@@ -258,8 +191,6 @@ function splitExpr(expr){
 
 }
 
-
-
 /* solves a flattened expression following PEMDAS*/ 
 function solve(expr){
     const ops = [new Set("^"), new Set("*/"), new Set("+-")];
@@ -275,7 +206,6 @@ function solve(expr){
             } else{
                 if (isNumeric(expr[i]) && ops[j].has(expr[i+1])){
                     expr.splice(i, 3,  opDict[expr[i+1]](parseFloat(expr[i]), parseFloat(expr[i+2])));
-                    //expr[i] = opDict[expr[i+1]](parseFloat(expr[i]), parseFloat(expr[i+2]));
                 } else{
                     i += 2;
                 }
@@ -287,3 +217,54 @@ function solve(expr){
 
 }
 
+document.getElementById("sqrt").addEventListener('click', function(){
+    if (calc.numSelected || !calc.opSelected){
+        return;
+    }
+    calc.num.push(this.textContent);
+    updtDisp();
+})
+document.getElementById('pi').addEventListener('click', function(){
+    if (calc.numSelected || (!calc.opSelected && !calc.num.length) || calc.num[calc.num.length-1] === this.textContent){
+        return;
+    }
+    calc.num.push(this.textContent);
+    calc.opSelected = false;
+    updtDisp();
+})
+// only allow the user to input an opening parenthesis
+// only when there is an operator before, so the calculator
+// knows what operation to applt to this parenthesis
+document.getElementById("openPar").addEventListener('click',function(){
+    if (calc.numSelected || !calc.opSelected){
+        return;
+    }
+    calc.openParCount++;
+    calc.num.push(this.textContent);
+    updtDisp();
+    return
+    
+})
+// only allow the user to put a closing parenthesis if there
+// is an opening parenthesis that can be closed
+// also it can't be placed after an operator as that would
+// be invalid
+document.getElementById("closePar").addEventListener('click', function(){
+    if ((calc.openParCount <= calc.closeParCount) || calc.opSelected){
+        return;
+    }
+    calc.num.push(this.textContent);
+    calc.closeParCount++;
+    updtDisp();
+    return;
+    
+})
+
+addButtFunct();
+
+// depending on the last input after deleting,
+// we have to make sure that the variables
+// are correct to prevent unexpected functionality
+document.getElementById('del').addEventListener('click', delInp);
+
+document.getElementById("clear").addEventListener('click', clear);
