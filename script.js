@@ -1,5 +1,7 @@
-let calc = {num:[], opSelected: true, numSelected:false,openParCount:0, closeParCount:0};
-
+let calc = {num:[], opSelected: true, numSelected:false,openParCount:0, closeParCount:0, specialSym:false};
+const ZERO_DIV_ERROR = 'Division by zero';
+const INVALID_EXPR_ERROR = 'Invalid expression';
+const PI_SYM = 'π';
 
 // functions for each operation
 function sumNums(a,b){
@@ -12,6 +14,9 @@ function mulNums(a,b){
     return a*b;
 }
 function divNums(a,b){
+    if (b === 0){
+        return ZERO_DIV_ERROR;
+    }
     return a/b;
 }
 function expNums(a,b){
@@ -51,13 +56,13 @@ function addOp(p){
     }
     calc.num.push(p);
     calc.opSelected = true;
+    calc.specialSym = false;
 
     updtDisp();
 }
 
 function concatNum(n){
-    if (calc.num[calc.num.length - 1] === 'π' ||
-    (n === '0' && calc.num[calc.num.length-1] === '/')){
+    if (calc.specialSym){
         return;
     }
     calc.num.push(n);
@@ -70,6 +75,15 @@ function concatNum(n){
     updtDisp();
 }
 
+function addSpecialSym(symb){
+    if (calc.numSelected || (!calc.opSelected && !calc.num.length) || calc.specialSym){
+        return;
+    }
+    calc.num.push(symb);
+    calc.opSelected = false;
+    calc.specialSym = true;
+    updtDisp();
+}
 function delInp(){
     calc.num.pop();
     const opSym = new Set("+-*/^")
@@ -85,13 +99,15 @@ function delInp(){
     else if (opSym.has(last)){
         calc.numSelected = false;
         calc.opSelected = true;
+        calc.specialSym = false;
     } 
     else if (last === '('){
         calc.openParCount--;
     } else if (last === ')'){
         calc.closeParCount--;
-    } else if (last === 'π'){
-        calc.opSelected = true;
+    } else if (last === PI_SYM || last === e){
+        calc.opSelected = false;
+        calc.specialSym = true;
     }
     updtDisp();
 }
@@ -191,12 +207,26 @@ function splitExpr(expr){
 
 }
 
+function getNumValue(num){
+    if (num === PI_SYM){
+        return Math.PI;
+    } else if (num === 'e'){
+        return Math.E;
+    } else if (isNumeric(num)){
+        return parseFloat(num);
+    } else{
+        return false;
+    }
+}
 /* solves a flattened expression following PEMDAS*/ 
 function solve(expr){
     const ops = [new Set("^"), new Set("*/"), new Set("+-")];
     for (let j = 0; j < ops.length; ++j){
         let i = 0;
         while (i < expr.length){
+            if (expr[i] === ZERO_DIV_ERROR || expr[i] === INVALID_EXPR_ERROR){
+                return expr[i];
+            }
             if (Array.isArray(expr[i])){
                 if (expr[i][0] === '√'){
                     expr[i] = Math.sqrt(solve(expr[i][1]))
@@ -204,14 +234,24 @@ function solve(expr){
                     expr[i] = solve(expr[i]);
                 }
             } else{
-                if (isNumeric(expr[i]) && ops[j].has(expr[i+1])){
-                    expr.splice(i, 3,  opDict[expr[i+1]](parseFloat(expr[i]), parseFloat(expr[i+2])));
+                let n1 = getNumValue(expr[i]), n2 = getNumValue(expr[i+2]);
+                if (n1 !== false && n2 !== false && ops[j].has(expr[i+1])){
+                    let tmp = opDict[expr[i+1]](n1, n2);
+                    if (tmp === ZERO_DIV_ERROR){
+                        return ZERO_DIV_ERROR;
+                    }
+                    expr.splice(i, 3, tmp);
                 } else{
                     i += 2;
                 }
             }
         }
         
+    }
+
+    
+    if (expr.length > 1){
+        return INVALID_EXPR_ERROR;
     }
     return expr[0];
 
@@ -225,12 +265,11 @@ document.getElementById("sqrt").addEventListener('click', function(){
     updtDisp();
 })
 document.getElementById('pi').addEventListener('click', function(){
-    if (calc.numSelected || (!calc.opSelected && !calc.num.length) || calc.num[calc.num.length-1] === this.textContent){
-        return;
-    }
-    calc.num.push(this.textContent);
-    calc.opSelected = false;
-    updtDisp();
+   addSpecialSym(this.textContent);
+})
+
+document.getElementById('euler').addEventListener('click', function(){
+    addSpecialSym(this.textContent);
 })
 // only allow the user to input an opening parenthesis
 // only when there is an operator before, so the calculator
