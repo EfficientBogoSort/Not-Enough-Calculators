@@ -15,10 +15,11 @@ html, body {
     display: flex;
 }
 
-#disp{
-    height: 100%;
+.disp{
     background-color: magenta;
+    height: 50%;
 }
+
 #dispCont {
     width: 100%;
 
@@ -41,7 +42,7 @@ html, body, #dispCont{
     flex-direction: column;
 }
 
-#disp, #numpadCont, #operatorsCont{
+.disp, #numpadCont, #operatorsCont{
     width: 90%;
 }
 .calcButt{
@@ -52,4 +53,10 @@ html, body, #dispCont{
 }
 #numpadCont{
     margin: 2.5% 0%;
+}
+
+#lower {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
 }

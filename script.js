@@ -1,4 +1,11 @@
-let calc = {num:[], opSelected: true, numSelected:false,openParCount:0, closeParCount:0, specialSym:false};
+let calc = {num:[], 
+    opSelected: true, 
+    numSelected:false,
+    openParCount:0, 
+    closeParCount:0, 
+    specialSym:false, 
+    dot:false, 
+    resDisplayed: false};
 const ZERO_DIV_ERROR = 'Division by zero';
 const INVALID_EXPR_ERROR = 'Invalid expression';
 const PI_SYM = 'π';
@@ -43,10 +50,17 @@ document.onkeydown = function (e){
 }
 
 function addOp(p){
-    if (calc.opSelected){
+    if (calc.resDisplayed){
+        let startNum = document.getElementById('lower').textContent.split('')
+        clear();
+        calc.num = startNum;
+        calc.resDisplayed = false;
+        
+    } else if (calc.opSelected){
         if (p !== '-'){
             return;
-        } else if (!(calc.num.length === 0 ||calc.num[calc.num.length - 1] === '(')){
+        } else if (!(calc.num.length === 0 ||
+            calc.num[calc.num.length - 1] === '(')){
             return;
         }
         
@@ -57,14 +71,24 @@ function addOp(p){
     calc.num.push(p);
     calc.opSelected = true;
     calc.specialSym = false;
+    calc.dot = false;
 
     updtDisp();
+}
+
+function checkNewExpr(){
+    if (!calc.resDisplayed){
+        return;
+    }
+    clear();
+    calc.resDisplayed = false;
 }
 
 function concatNum(n){
     if (calc.specialSym){
         return;
     }
+    checkNewExpr();
     calc.num.push(n);
     if (calc.opSelected){
         calc.opSelected = false;
@@ -76,7 +100,8 @@ function concatNum(n){
 }
 
 function addSpecialSym(symb){
-    if (calc.numSelected || (!calc.opSelected && !calc.num.length) || calc.specialSym){
+    if (calc.numSelected || 
+        (!calc.opSelected && !calc.num.length) || calc.specialSym){
         return;
     }
     calc.num.push(symb);
@@ -85,9 +110,17 @@ function addSpecialSym(symb){
     updtDisp();
 }
 function delInp(){
-    calc.num.pop();
+    if (calc.resDisplayed){
+        return;
+    }
+    let deleted = calc.num.pop();
+    if (deleted === '.'){
+        calc.dot = false;
+    }
     const opSym = new Set("+-*/^")
     let last = calc.num[calc.num.length - 1];
+
+    // make sure that the calculator parameters are correct
     if (last >= '0' && last <= '9'){
         if (!calc.numSelected){
             calc.numSelected = true;
@@ -105,9 +138,10 @@ function delInp(){
         calc.openParCount--;
     } else if (last === ')'){
         calc.closeParCount--;
-    } else if (last === PI_SYM || last === e){
+    } else if (last === PI_SYM || last === 'e'){
         calc.opSelected = false;
         calc.specialSym = true;
+        calc.numSelected = false;
     }
     updtDisp();
 }
@@ -127,15 +161,20 @@ function addButtFunct(){
     }
 }
 
-function numify(){
-    if (calc.num.length === 0){
-        return "";
+
+function clearDisp(){
+    let butts = document.getElementsByClassName("disp");
+    for (let i = 0; i < butts.length; ++i){
+        butts[i].textContent = '';
     }
-    return calc.num.join("");
 }
 
 function updtDisp(){
-    document.getElementById("disp").textContent = numify();
+    if (calc.num.length === 0){
+        clearDisp();
+    } else{
+        document.getElementById("upper").textContent = calc.num.join("");
+    }
 }
 
 function clear(){
@@ -145,6 +184,8 @@ function clear(){
     calc.numSelected = false;
     updtDisp();
     calc.opSelected = true;
+    calc.dot = false;
+    
 }
 
 function isNumeric(term){
@@ -256,6 +297,24 @@ function solve(expr){
     return expr[0];
 
 }
+
+function displayResult(){
+    document.getElementById('lower').textContent = solve(splitExpr(calc.num));
+    calc.resDisplayed = true;
+}
+
+document.getElementById('dot').addEventListener('click', ()=>{
+    if (calc.dot){
+        return;
+    }
+    checkNewExpr();
+    calc.num.push('.');
+    calc.dot = true;
+    updtDisp();
+})
+
+
+document.getElementById('result').addEventListener('click', displayResult);
 
 document.getElementById("sqrt").addEventListener('click', function(){
     if (calc.numSelected || !calc.opSelected){
